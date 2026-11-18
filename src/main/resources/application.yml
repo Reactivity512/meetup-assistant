@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: meetup-assistant
+
+  datasource:
+    url: jdbc:h2:file:./data/meetups;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  h2:
+    console:
+      enabled: false
+      path: /h2-console
+
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 520MB
+
+  thymeleaf:
+    cache: false
+
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      init:
+        pull-model-strategy: never
+      chat:
+        options:
+          # Change to any model from `ollama list` (for example llama3.1:8b).
+          model: qwen3.5:4b
+          temperature: 0.2
+
+server:
+  port: 8080
+  error:
+    include-message: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  storage:
+    dir: ./data
+    # Audio older than this is deleted hourly; transcripts remain in the DB.
+    retention: 30d
+    cleanup-enabled: true
+    cleanup-cron: "0 15 * * * *"
+  speech:
+    model-path: ${VOSK_MODEL_PATH:./models/vosk-model-small-ru-0.22}
+    sample-rate: 16000
+    ffmpeg-command: ${FFMPEG_PATH:ffmpeg}
+    ffmpeg-enabled: true
+    timeout: 30m
+  assistant:
+    chunk-size: 6000
+    max-chunks: 20
+    max-question-length: 1000
+    history-limit: 50
+
+logging:
+  level:
+    root: INFO
+    github.reactivity512.meetup: INFO
+    org.springframework.ai: INFO

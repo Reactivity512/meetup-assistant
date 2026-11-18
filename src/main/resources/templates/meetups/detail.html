@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${meetup.title})}"></head>
+<body class="bg-body-tertiary d-flex flex-column min-vh-100">
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-4 flex-grow-1">
+    <div id="meetup-page"
+         th:attr="data-status-url=@{/api/meetups/{id}/status(id=${meetup.id})},data-busy=${meetup.status.busy}">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a class="text-decoration-none" th:href="@{/meetups}">Митинги</a></li>
+                <li class="breadcrumb-item active" aria-current="page" th:text="${meetup.title}"></li>
+            </ol>
+        </nav>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+            <div>
+                <h1 class="h3 mb-1" th:text="${meetup.title}">Название митинга</h1>
+                <div class="text-secondary small">
+                    <span th:text="'Загружен ' + ${meetup.createdAtFormatted}"></span>
+                    <span th:if="${meetup.audioOriginalName}" th:text="' · ' + ${meetup.audioOriginalName}"></span>
+                    <span th:text="' · ' + ${meetup.audioSizeFormatted}"></span>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span id="detail-status-badge" class="badge fs-6 rounded-pill"
+                      th:classappend="'text-bg-' + ${meetup.status.badgeClass}"
+                      th:text="${meetup.status.label}">Статус</span>
+                <span class="spinner-border spinner-border-sm text-secondary" th:if="${meetup.status.busy}"
+                      role="status" aria-hidden="true"></span>
+            </div>
+        </div>
+
+        <div class="alert alert-success alert-dismissible fade show" role="alert" th:if="${success}">
+            <i class="bi bi-check-circle"></i> <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+        </div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert" th:if="${assistantSuccess}">
+            <i class="bi bi-check-circle"></i> <span th:text="${assistantSuccess}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+        </div>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert" th:if="${assistantError}">
+            <i class="bi bi-exclamation-triangle"></i> <span th:text="${assistantError}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4" th:if="${audioAvailable}">
+            <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <h2 class="h6 text-uppercase text-secondary mb-0"><i class="bi bi-soundwave"></i> Аудиозапись</h2>
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-sm btn-outline-secondary" th:href="@{/meetups/{id}/audio(id=${meetup.id})}"
+                           download th:attr="download=${meetup.audioOriginalName}">
+                            <i class="bi bi-download"></i> Скачать
+                        </a>
+                        <form method="post" th:action="@{/meetups/{id}/retry(id=${meetup.id})}"
+                              th:if="${!meetup.status.busy}"
+                              onsubmit="return confirm('Запустить распознавание заново? Текущий транскрипт будет заменён.');">
+                            <button type="submit" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-arrow-clockwise"></i> Распознать заново
+                            </button>
+                        </form>
+                        <form method="post" th:action="@{/meetups/{id}/delete(id=${meetup.id})}"
+                              onsubmit="return confirm('Удалить митинг, транскрипт и историю вопросов? Действие необратимо.');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i> Удалить
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <audio controls preload="metadata" class="w-100"
+                       th:src="@{/meetups/{id}/audio(id=${meetup.id})}">
+                    Ваш браузер не поддерживает воспроизведение аудио.
+                </audio>
+            </div>
+        </div>
+
+        <div class="alert alert-secondary d-flex flex-wrap justify-content-between align-items-center gap-2"
+             th:unless="${audioAvailable}">
+            <span><i class="bi bi-archive"></i> Аудиофайл удалён по политике хранения. Транскрипт и ответы сохранены.</span>
+            <form method="post" th:action="@{/meetups/{id}/delete(id=${meetup.id})}"
+                  onsubmit="return confirm('Удалить митинг, транскрипт и историю вопросов?');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i> Удалить митинг
+                </button>
+            </form>
+        </div>
+
+        <div class="card border-info mb-4" th:if="${meetup.status.busy}">
+            <div class="card-body d-flex align-items-center gap-3">
+                <span class="spinner-border text-info" role="status" aria-hidden="true"></span>
+                <div>
+                    <div class="fw-semibold">Идёт распознавание речи</div>
+                    <div class="small text-secondary">Vosk обрабатывает аудио локально. Страница обновится автоматически.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-danger" th:if="${meetup.status.failed}">
+            <h2 class="h6"><i class="bi bi-exclamation-octagon"></i> Не удалось распознать запись</h2>
+            <pre class="small mb-2 mt-2 text-wrap" th:text="${meetup.processingError}"></pre>
+            <div class="small mb-0" th:if="${audioAvailable}">
+                Проверьте модель Vosk, ffmpeg и формат файла, затем нажмите «Распознать заново».
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+                <h2 class="h6 text-uppercase text-secondary mb-0"><i class="bi bi-file-text"></i> Транскрипт</h2>
+                <div class="d-flex align-items-center gap-2" th:if="${meetup.transcript != null}">
+                    <span class="small text-secondary" th:text="${meetup.transcriptChars} + ' симв.'"></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            data-copy-target="transcript-text">
+                        <i class="bi bi-clipboard"></i> Копировать
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            th:attr="data-download-transcript=${meetup.id},data-filename=${meetup.title}">
+                        <i class="bi bi-download"></i> .txt
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <pre class="transcript-box mb-0" id="transcript-text" th:if="${meetup.transcript != null}"
+                     th:text="${meetup.transcript}"></pre>
+                <div class="text-secondary" th:if="${meetup.transcript == null and meetup.status.busy}">
+                    Транскрипт появится после завершения распознавания…
+                </div>
+                <div class="text-secondary" th:if="${meetup.transcript == null and !meetup.status.busy}">
+                    Транскрипта пока нет.
+                </div>
+                <div class="small text-secondary mt-2" th:if="${meetup.transcribedAt != null}">
+                    <i class="bi bi-clock-history"></i>
+                    Распознано: <span th:text="${meetup.transcribedAtFormatted}"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h2 class="h6 text-uppercase text-secondary mb-0">
+                    <i class="bi bi-chat-square-text"></i> Ассистент по митингу
+                </h2>
+            </div>
+            <div class="card-body">
+                <div th:if="${meetup.status.ready}">
+                    <form method="post" th:action="@{/meetups/{id}/assistant(id=${meetup.id})}"
+                          th:object="${questionForm}" data-question-form>
+                        <label for="question" class="form-label">Вопрос по содержанию встречи</label>
+                        <textarea class="form-control" id="question" rows="3" th:field="*{question}"
+                                  th:classappend="${#fields.hasErrors('question')} ? 'is-invalid'"
+                                  th:attr="maxlength=${maxQuestionLength}"
+                                  placeholder="Например: Какие решения приняли на митинге?" required></textarea>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('question')}"
+                             th:errors="*{question}"></div>
+                        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mt-2">
+                            <div class="d-flex flex-wrap gap-1" aria-label="Примеры вопросов">
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        data-question-example="Какие решения приняли на митинге?">Решения</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        data-question-example="Какие задачи поставили и на кого их назначили?">Задачи</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        data-question-example="Какие сроки и договорённости зафиксировали?">Сроки</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        data-question-example="Какие риски и открытые вопросы обсуждали?">Риски</button>
+                            </div>
+                            <button type="submit" class="btn btn-primary" data-assistant-submit>
+                                <span class="spinner-border spinner-border-sm d-none" data-assistant-spinner
+                                      role="status" aria-hidden="true"></span>
+                                <i class="bi bi-send"></i> Спросить
+                            </button>
+                        </div>
+                        <div class="form-text mt-2">
+                            Модель отвечает только по тексту этой встречи. Длинные транскрипты обрабатываются частями,
+                            поэтому ответ может занять несколько минут.
+                        </div>
+                    </form>
+                </div>
+                <div class="text-secondary" th:unless="${meetup.status.ready}">
+                    <i class="bi bi-hourglass-split"></i>
+                    Задавать вопросы можно после успешного распознавания записи.
+                </div>
+
+                <div class="mt-4" th:if="${!answers.isEmpty()}">
+                    <h3 class="h6 text-uppercase text-secondary mb-3">История вопросов</h3>
+                    <div class="card bg-body-tertiary border-0 mb-3" th:each="a : ${answers}">
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap justify-content-between gap-2">
+                                <div class="fw-semibold">
+                                    <i class="bi bi-question-circle text-primary"></i>
+                                    <span th:text="${a.question}"></span>
+                                </div>
+                                <div class="small text-secondary text-nowrap" th:text="${a.createdAtFormatted}"></div>
+                            </div>
+                            <div class="answer-text mt-2" th:text="${a.answer}"></div>
+                            <div class="small text-secondary mt-2">
+                                <i class="bi bi-cpu"></i> <span th:text="${a.model}"></span>
+                                <span th:if="${a.latencyMs != null}"
+                                      th:text="' · ' + ${a.latencyMs} + ' мс'"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>

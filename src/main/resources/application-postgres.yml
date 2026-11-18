@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/meetups}
+    username: ${DB_USERNAME:meetups}
+    password: ${DB_PASSWORD:meetups}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+app:
+  storage:
+    dir: ${DATA_DIR:./data}

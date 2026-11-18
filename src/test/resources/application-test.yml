@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:meetup-test;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  ai:
+    ollama:
+      chat:
+        options:
+          model: test-model
+
+app:
+  storage:
+    dir: ./target/test-data
+    cleanup-enabled: false
+  speech:
+    model-path: ./target/test-models/does-not-exist
+  assistant:
+    chunk-size: 1000
+    max-chunks: 5

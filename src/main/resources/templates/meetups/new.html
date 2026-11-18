@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Загрузка митинга')}"></head>
+<body class="bg-body-tertiary d-flex flex-column min-vh-100">
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-4 flex-grow-1">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a class="text-decoration-none" th:href="@{/meetups}">Митинги</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Загрузка</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h1 class="h4 mb-1">Новый митинг</h1>
+                    <p class="text-secondary">Загрузите запись встречи — распознавание начнётся сразу после сохранения.</p>
+
+                    <form th:action="@{/meetups}" method="post" enctype="multipart/form-data"
+                          th:object="${form}" id="upload-form">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Название митинга</label>
+                            <input type="text" class="form-control" id="title" th:field="*{title}"
+                                   th:classappend="${#fields.hasErrors('title')} ? 'is-invalid'"
+                                   placeholder="Например: Планирование спринта 42" maxlength="200" required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></div>
+                            <div class="form-text">По этому названию митинг будет виден в таблице.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <span class="form-label d-block">Аудиозапись</span>
+                            <label class="upload-zone w-100" for="file" data-drop-zone>
+                                <i class="bi bi-cloud-arrow-up display-5 text-primary"></i>
+                                <span class="fw-semibold">Перетащите файл сюда или нажмите, чтобы выбрать</span>
+                                <span class="small text-secondary">WAV, MP3, M4A, OGG, FLAC, MP4, WEBM · до 500 МБ</span>
+                                <span class="upload-filename mt-2" data-file-info>Файл не выбран</span>
+                            </label>
+                            <input type="file" class="visually-hidden" id="file" th:field="*{file}"
+                                   accept="audio/*,.wav,.mp3,.m4a,.ogg,.oga,.opus,.flac,.mp4,.webm,.wma"
+                                   data-audio-input required>
+                            <div class="text-danger small mt-1" th:if="${#fields.hasErrors('file')}" th:errors="*{file}"></div>
+                        </div>
+
+                        <div class="alert alert-danger" th:if="${#fields.hasGlobalErrors()}">
+                            <div th:each="err : ${#fields.globalErrors()}" th:text="${err}"></div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center gap-3">
+                            <a class="btn btn-outline-secondary" th:href="@{/meetups}">Отмена</a>
+                            <button type="submit" class="btn btn-primary" data-submit-button>
+                                <span class="spinner-border spinner-border-sm d-none" data-submit-spinner
+                                      role="status" aria-hidden="true"></span>
+                                <i class="bi bi-magic"></i> Загрузить и распознать
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h2 class="h6 text-uppercase text-secondary">Как это работает</h2>
+                    <ol class="list-unstyled mb-0 d-grid gap-3 mt-3">
+                        <li class="d-flex gap-3">
+                            <span class="step-number">1</span>
+                            <div>
+                                <div class="fw-semibold">Загрузка</div>
+                                <div class="small text-secondary">Файл сохраняется локально в каталоге <code>data/audio</code>.</div>
+                            </div>
+                        </li>
+                        <li class="d-flex gap-3">
+                            <span class="step-number">2</span>
+                            <div>
+                                <div class="fw-semibold">Распознавание Vosk</div>
+                                <div class="small text-secondary">Аудио конвертируется в 16 кГц mono, затем локальная модель Vosk формирует транскрипт.</div>
+                            </div>
+                        </li>
+                        <li class="d-flex gap-3">
+                            <span class="step-number">3</span>
+                            <div>
+                                <div class="fw-semibold">Вопросы к LLM</div>
+                                <div class="small text-secondary">Транскрипт хранится в БД. Spring AI передаёт его в Ollama и сохраняет ответ.</div>
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+            <div class="alert alert-warning small mb-0">
+                <i class="bi bi-info-circle"></i>
+                Язык распознавания задаётся моделью Vosk. Для русских встреч используйте
+                <code>vosk-model-small-ru-0.22</code>, для английских — <code>vosk-model-small-en-us-0.15</code>.
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+</body>
+</html>
